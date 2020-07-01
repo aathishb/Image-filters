@@ -21,12 +21,10 @@ DEFINES += \
 SOURCES += \
     main.cpp \
     mainwindow.cpp
-
 HEADERS += \
     mainwindow.h \
     stb_image.h \
     stb_image_write.h
-
 FORMS += \
     mainwindow.ui
 

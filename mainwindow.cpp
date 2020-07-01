@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include <QMessageBox>
 #include <math.h>
+#include <string.h>
 #include "stb_image.h"
 #include "stb_image_write.h"
 
@@ -25,7 +26,7 @@ void MainWindow::on_exit_clicked()
 
 void MainWindow::on_apply_clicked()
 {
-    // Remember filenames
+    // Input and output filenames
     QString inf = ui->image_name->text();
     QString outf = ui->image_rename->text();
     if (inf == NULL || outf == NULL)
@@ -47,6 +48,29 @@ void MainWindow::on_apply_clicked()
     char* outfile = out.data();
 
     // Check extension
+    std::string ins = std::string(infile);
+    std::string outs = std::string(outfile);
+    char* extension = new char[3];
+    std::string::reverse_iterator rin = ins.rbegin();
+    std::string::reverse_iterator rout = outs.rbegin();
+    for (int i = 0; i < 3; i++)
+    {
+        if ((*rin) != (*rout))
+        {
+            QMessageBox::warning(this, "", "Both file extensions must match");
+            return;
+        }
+        extension[2-i] = (*rin);
+        rin++;
+        rout++;
+    }
+    if (!(strcmp(extension, "png") == 0 || strcmp(extension, "bmp") == 0 ||
+          strcmp(extension, "tga") == 0 || strcmp(extension, "jpg") == 0))
+    {
+        delete[] extension;
+        QMessageBox::warning(this, "", "File type not supported");
+        return;
+    }
 
 
     // Create input image
@@ -54,6 +78,7 @@ void MainWindow::on_apply_clicked()
     uint8_t* image = stbi_load(infile, &width, &height, &bpp, 3);
     if (image == NULL)
     {
+        delete[] image;
         QMessageBox::critical(this, "", "Unable to open file");
         return;
     }
@@ -68,8 +93,6 @@ void MainWindow::on_apply_clicked()
         QMessageBox::critical(this, "", "Unable to create file");
         return;
     }
-
-    char* extension = new char[3];
 
     // Filter image
     if (ui->grey->isChecked())
@@ -243,6 +266,12 @@ void MainWindow::on_apply_clicked()
             }
         }
 
+        uint8_t** newmatrix = new uint8_t*[height];
+        for (int i = 0; i < height; i++)
+        {
+            newmatrix[i] = new uint8_t[width*3];
+        }
+
         int w = (width*3)-2;
         uint8_t r, g, b;
         for (int i = 0; i < height; i++)
@@ -251,40 +280,77 @@ void MainWindow::on_apply_clicked()
             {
                 if (i == 0 && j == 0)
                 {
-
+                    r = round((matrix[i][j] + matrix[i][j+3] + matrix[i+1][j] + matrix[i+1][j+3])/4);
+                    g = round((matrix[i][j+1] + matrix [i][j+4] + matrix[i+1][j+1] + matrix[i+1][j+4])/4);
+                    b = round((matrix[i][j+2] + matrix [i][j+5] + matrix[i+1][j+2] + matrix[i+1][j+5])/4);
                 }
                 else if (i == 0 && (j > 0 && j < w-1))
                 {
-
+                    r = round((matrix[i][j-3] + matrix[i][j] + matrix[i][j+3] +
+                               matrix[i+1][j-3] + matrix[i+1][j] + matrix[i+1][j+3])/6);
+                    g = round((matrix[i][j-2] + matrix[i][j+1] + matrix[i][j+4] +
+                               matrix[i+1][j-2] + matrix[i+1][j+1] + matrix[i+1][j+4])/6);
+                    b = round((matrix[i][j-1] + matrix[i][j+2] + matrix[i][j+5] +
+                               matrix[i+1][j-1] + matrix[i+1][j+2] + matrix[i+1][j+5])/6);
                 }
                 else if (i == 0 && j == w-1)
                 {
-
+                    r = round((matrix[i][j-3] + matrix[i][j] + matrix[i+1][j-3] + matrix[i+1][j])/4);
+                    g = round((matrix[i][j-2] + matrix[i][j+1] + matrix[i+1][j-2] + matrix[i+1][j+1])/4);
+                    b = round((matrix[i][j-1] + matrix[i][j+2] + matrix[i+1][j-1] + matrix[i+1][j+2])/4);
                 }
                 else if ((i > 0 && i < height-1) && j == 0)
                 {
-
+                    r = round((matrix[i-1][j] + matrix[i-1][j+3] + matrix[i][j] +
+                               matrix[i][j+3] + matrix[i+1][j] + matrix[i+1][j+3])/6);
+                    g = round((matrix[i-1][j+1] + matrix[i-1][j+4] + matrix[i][j+1] +
+                            matrix[i][j+4] + matrix[i+1][j+1] + matrix[i+1][j+4])/6);
+                    b = round((matrix[i-1][j+2] + matrix[i-1][j+5] + matrix[i][j+2] +
+                            matrix[i][j+5] + matrix[i+1][j+2] + matrix[i+1][j+5])/6);
                 }
                 else if ((i > 0 && i < height-1) && (j > 0 && j < w-1))
                 {
-
+                    r = round((matrix[i-1][j-3] + matrix[i-1][j] + matrix[i-1][j+3] +
+                               matrix[i][j-3] + matrix[i][j] + matrix[i][j+3] +
+                               matrix[i+1][j-3] + matrix[i+1][j] + matrix[i+1][j+3])/9);
+                    g = round((matrix[i-1][j-2] + matrix[i-1][j+1] + matrix[i-1][j+4] +
+                            matrix[i][j-2] + matrix[i][j+1] + matrix[i][j+4] +
+                            matrix[i+1][j-2] + matrix[i+1][j+1] + matrix[i+1][j+4])/9);
+                    b = round((matrix[i-1][j-1] + matrix[i-1][j+2] + matrix[i-1][j+5] +
+                            matrix[i][j-1] + matrix[i][j+2] + matrix[i][j+5] +
+                            matrix[i+1][j-1] + matrix[i+1][j+2] + matrix[i+1][j+5])/9);
                 }
                 else if ((i > 0 && i < height-1) && j == w-1)
                 {
-
+                    r = round((matrix[i-1][j-3] + matrix[i-1][j] + matrix[i][j-3] +
+                               matrix[i][j] + matrix[i+1][j-3] + matrix[i+1][j])/6);
+                    g = round((matrix[i-1][j-2] + matrix[i-1][j+1] + matrix[i][j-2] +
+                            matrix[i][j+1] + matrix[i+1][j-2] + matrix[i+1][j+1])/6);
+                    b = round((matrix[i-1][j-1] + matrix[i-1][j+2] + matrix[i][j-1] +
+                            matrix[i][j+2] + matrix[i+1][j-1] + matrix[i+1][j+2])/6);
                 }
                 else if (i == height-1 && j == 0)
                 {
-
+                    r = round((matrix[i-1][j] + matrix[i-1][j+3] + matrix[i][j] + matrix[i][j+3])/4);
+                    g = round((matrix[i-1][j+1] + matrix[i-1][j+4] + matrix[i][j+1] + matrix[i][j+4])/4);
+                    b = round((matrix[i-1][j+2] + matrix[i-1][j+5] + matrix[i][j+2] + matrix[i][j+5])/4);
                 }
                 else if (i == height-1 && (j > 0 && j < w-1))
                 {
-
+                    r = round((matrix[i-1][j-3] + matrix[i-1][j] + matrix[i-1][j+3] +
+                               matrix[i][j-3] + matrix[i][j] + matrix[i][j+3])/6);
+                    g = round((matrix[i-1][j-2] + matrix[i-1][j+1] + matrix[i-1][j+4] +
+                            matrix[i][j-2] + matrix[i][j+1] + matrix[i][j+4])/6);
+                    b = round((matrix[i-1][j-1] + matrix[i-1][j+2] + matrix[i-1][j+5] +
+                            matrix[i][j-1] + matrix[i][j+2] + matrix[i][j+5])/6);
                 }
                 else if (i == height-1 && j == w-1)
                 {
-
+                    r = round((matrix[i-1][j-3] + matrix[i-1][j] + matrix[i][j-3] + matrix[i][j])/4);
+                    g = round((matrix[i-1][j-2] + matrix[i-1][j+1] + matrix[i][j-2] + matrix[i][j+1])/4);
+                    b = round((matrix[i-1][j-1] + matrix[i-1][j+2] + matrix[i][j-1] + matrix[i][j+2])/4);
                 }
+                newmatrix[i][j] = r; newmatrix[i][j+1] = g; newmatrix[i][j+2] = b;
             }
         }
 
@@ -293,10 +359,18 @@ void MainWindow::on_apply_clicked()
         {
             for (int j = 0; j < width*3; j++)
             {
-                newimage[c] = matrix[i][j];
+                newimage[c] = newmatrix[i][j];
                 c++;
             }
         }
+
+        for (int i = 0; i < height; i++)
+        {
+            delete[] newmatrix[i];
+            newmatrix[i] = nullptr;
+        }
+        delete[] newmatrix;
+        newmatrix = nullptr;
 
         for (int i = 0; i < height; i++)
         {
@@ -309,11 +383,106 @@ void MainWindow::on_apply_clicked()
 
     else
     {
+        // 2D array is needed to represent image
+        uint8_t** matrix = new uint8_t*[height];
+        for (int i = 0; i < height; i++)
+        {
+            matrix[i] = new uint8_t[width*3];
+        }
 
+        int c = 0;
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width*3; j++)
+            {
+                matrix[i][j] = image[c];
+                c++;
+            }
+        }
+
+        uint8_t** newmatrix = new uint8_t*[height];
+        for (int i = 0; i < height; i++)
+        {
+            newmatrix[i] = new uint8_t[width*3];
+        }
+
+        int w = (width*3)-2;
+        uint8_t r, g, b;
+        int rx, ry, gx, gy, bx, by;
+
+        for (int i = 1; i < height-1; i++)
+        {
+            for (int j = 3; j < w-3; j+=3)
+            {
+                rx = -1*matrix[i-1][j-3] -2*matrix[i][j-3] -1*matrix[i+1][j-3]
+                     +1*matrix[i-1][j+3] +2*matrix[i][j+3] +1*matrix[i+1][j+3];
+                ry = -1*matrix[i-1][j-3] -2*matrix[i-1][j] -1*matrix[i-1][j+3]
+                     +1*matrix[i+1][j-3] +2*matrix[i+1][j] +1*matrix[i+1][j+3];
+                r = sqrt(rx*rx + ry*ry);
+
+                gx = -1*matrix[i-1][j-2] -2*matrix[i][j-2] -1*matrix[i+1][j-2]
+                     +1*matrix[i-1][j+4] +2*matrix[i][j+4] +1*matrix[i+1][j+4];
+                gy = -1*matrix[i-1][j-2] -2*matrix[i-1][j+1] -1*matrix[i-1][j+4]
+                     +1*matrix[i+1][j-2] +2*matrix[i+1][j+1] +1*matrix[i+1][j+4];
+                g = sqrt(gx*gx + gy*gy);
+
+                bx = -1*matrix[i-1][j-1] -2*matrix[i][j-1] -1*matrix[i+1][j-1]
+                     +1*matrix[i-1][j+5] +2*matrix[i][j+5] +1*matrix[i+1][j+5];
+                by = -1*matrix[i-1][j-1] -2*matrix[i-1][j+2] -1*matrix[i-1][j+5]
+                     +1*matrix[i+1][j-1] +2*matrix[i+1][j+2] +1*matrix[i+1][j+5];
+                b = sqrt(bx*bx + by*by);
+
+                newmatrix[i][j] = r;
+                newmatrix[i][j+1] = g;
+                newmatrix[i][j+2] = b;
+            }
+        }
+
+        c = 0;
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width*3; j++)
+            {
+                newimage[c] = newmatrix[i][j];
+                c++;
+            }
+        }
+
+        for (int i = 0; i < height; i++)
+        {
+            delete[] newmatrix[i];
+            newmatrix[i] = nullptr;
+        }
+        delete[] newmatrix;
+        newmatrix = nullptr;
+
+        for (int i = 0; i < height; i++)
+        {
+            delete[] matrix[i];
+            matrix[i] = nullptr;
+        }
+        delete[] matrix;
+        matrix = nullptr;
     }
 
     // Write to output file
-    stbi_write_png(outfile, width, height, 3, newimage, width*3);
+    if (strcmp(extension, "png") == 0)
+    {
+        stbi_write_png(outfile, width, height, 3, newimage, width*3);
+    }
+    if (strcmp(extension, "bmp") == 0)
+    {
+        stbi_write_bmp(outfile, width, height, 3, newimage);
+    }
+    if (strcmp(extension, "tga") == 0)
+    {
+        stbi_write_tga(outfile, width, height, 3, newimage);
+    }
+    if (strcmp(extension, "jpg") == 0)
+    {
+        stbi_write_jpg(outfile, width, height, 3, newimage, width*3);
+    }
+
 
     delete[] extension;
     extension = nullptr;

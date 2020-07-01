@@ -17,7 +17,6 @@ public:
 
 private slots:
     void on_exit_clicked();
-
     void on_apply_clicked();
 
 private:
