@@ -182,7 +182,6 @@ RECENT REVISION HISTORY:
 // Philosophy
 //
 // stb libraries are designed with the following priorities:
-//
 //    1. easy to use
 //    2. easy to maintain
 //    3. good performance

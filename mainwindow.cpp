@@ -36,7 +36,8 @@ void MainWindow::on_apply_clicked()
     }
 
     if (!ui->grey->isChecked() && !ui->sepia->isChecked() && !ui->reflect->isChecked() &&
-        !ui->reflectV->isChecked() && !ui->blur->isChecked() && !ui->edge->isChecked())
+        !ui->reflectV->isChecked() && !ui->blur->isChecked() && !ui->edge->isChecked() &&
+        !ui->night->isChecked())
     {
         QMessageBox::warning(this, "", "Choose a filter");
         return;
@@ -97,7 +98,7 @@ void MainWindow::on_apply_clicked()
     // Filter image
     if (ui->grey->isChecked())
     {
-        int avg;
+        uint8_t avg;
         for (int i = 0; i < size-2; i+=3)
         {
             avg = round((image[i] + image[i+1] + image[i+2])/3);
@@ -381,7 +382,7 @@ void MainWindow::on_apply_clicked()
         matrix = nullptr;
     }
 
-    else
+    else if (ui->edge->isChecked())
     {
         // 2D array is needed to represent image
         uint8_t** matrix = new uint8_t*[height];
@@ -463,6 +464,33 @@ void MainWindow::on_apply_clicked()
         }
         delete[] matrix;
         matrix = nullptr;
+    }
+
+    else
+    {
+        int avg, light;
+        for (int i = 0; i < size-2; i+=3)
+        {
+            avg = round((image[i] + image[i+1] + image[i+2])/3);
+            if (avg < 0)
+            {
+                light = 0;
+            }
+            else
+            {
+                light = 100;
+            }
+            newimage[i] = avg;
+            if (avg + light > 255)
+            {
+                newimage[i+1] = 255;
+            }
+            else
+            {
+                newimage[i+1] = avg + light;
+            }
+            newimage[i+2] = avg;
+        }
     }
 
     // Write to output file
