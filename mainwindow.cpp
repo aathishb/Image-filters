@@ -478,7 +478,7 @@ void MainWindow::on_apply_clicked()
             }
             else
             {
-                light = 100;
+                light = 50;
             }
             newimage[i] = avg;
             if (avg + light > 255)
